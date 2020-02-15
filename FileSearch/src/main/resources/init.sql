@@ -1,11 +1,10 @@
 drop table if exists file_meta;
-CREATE TABLE IF NOT EXISTS file_meta (
-     id INTEGER PRIMARY KEY AUTOINCREMENT,
-     name VARCHAR(50) NOT NULL,
-     path VARCHAR(1000) NOT NULL,
-     is_directory BOOLEAN NOT NULL,
-     pinyin VARCHAR(50) ,
-     pinyin_first VARCHAR(50) ,
-     size BIGINT NOT NULL,
-     last_modified TIMESTAMP NOT NULL
+
+create table if not exists file_meta(-- 创建表操作
+    name varchar(50) not null,
+    path varchar(1000) not null,
+    size bigint not null,
+    last_modified timestamp not null,
+    pinyin varchar(50),
+    pinyin_first varchar(50)
 );

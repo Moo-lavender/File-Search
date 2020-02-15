@@ -1,8 +1,8 @@
 package task;
 
-import java.util.concurrent.LinkedBlockingDeque;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
+import java.io.File;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class FileScanner {
 
@@ -15,8 +15,97 @@ public class FileScanner {
             3,3,0, TimeUnit.MICROSECONDS,
             new LinkedBlockingDeque<>(),new ThreadPoolExecutor.CallerRunsPolicy()
     );
+    //这是一种快捷创建的方式
+    //private ExecutorService exe = Executors.newFixedThreadPool(4);
 
-    public static void scan(String path) {
+    //计数器，不传入数值表示初始化为0
+    private volatile AtomicInteger count = new AtomicInteger();
 
+    //线程等待的锁对象
+    private Object lock = new Object();//第一种：synchronized
+
+    private ScanCallback callback;
+    public FileScanner(ScanCallback callback) {
+        this.callback = callback;
+    }
+
+    //  private CountDownLatch latch = new CountDownLatch(1);//第二种：await阻塞等待
+  //  private Semaphore semaphore = new Semaphore(0);//第三章acquire()阻塞等待
+    /**
+     * 扫描文件目录
+     * @param path
+     */
+    public void scan(String path) {
+        count.incrementAndGet();//启动根目录扫描任务计数器i++
+        doScan(new File(path));
+    }
+    private void doScan(File dir) {
+        callback.callback(dir);
+        pool.execute(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    File[] children = dir.listFiles(); //下级文件和文件夹
+                    if (children != null) {
+                        for (File child : children) {
+                            if (child.isDirectory()) {//如果是文件夹，递归处理
+          //                      System.out.println("文件夹:" + child.getPath());
+                                count.incrementAndGet();//启动子文件夹扫描任务计数器i++
+                                doScan(child);
+                            }
+                            /*else {//如果是文件
+                                System.out.println("文件:" + child.getPath());
+                            }*/
+                        }
+                    }
+                }finally {
+                    //保证线程计数不管是否出现异常都能进行-1操作
+
+
+                    int r = count.decrementAndGet();
+                    if (r == 0) {
+                        synchronized (lock) {
+                            lock.notify();
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    /**
+     * 等待扫瞄任务结束scan方法
+     * 多线程的任务等待 thread.start
+     * 1.join():需要使用线程Thread类的引用对象
+     * 2.wait()线程间通信
+     */
+    public void waitFinish() throws InterruptedException {
+        synchronized (lock){
+            lock.wait();
+        }
+        //阻塞等待直到任务完成，玩抽需要关闭线程池
+        shutdown();
+    }
+
+    public void shutdown(){
+        pool.shutdown();//内部实现原理，是通过内部的Thread.interrupt()来中断
+
+
+    }
+    public static void main(String[] args) throws InterruptedException {
+        Thread t = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                System.out.println(Thread.currentThread().getName());
+                synchronized (FileScanner.class) {
+                    FileScanner.class.notifyAll();
+                }
+            }
+        });
+        t.start();
+        synchronized (FileScanner.class) {
+                FileScanner.class.wait();
+        }
+        System.out.println(Thread.currentThread().getName());
     }
 }

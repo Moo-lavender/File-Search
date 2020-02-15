@@ -13,7 +13,9 @@ import javafx.scene.layout.GridPane;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.Window;
 import task.DBInit;
+import task.FileSave;
 import task.FileScanner;
+import task.ScanCallback;
 
 import java.io.File;
 import java.net.URL;
@@ -59,16 +61,28 @@ public class Controller implements Initializable {
         // TODO
         srcDirectory.setText(path);
         //选择了目录就要执行目录的扫描任务，该目录下所有子文件和文件夹都扫描
+        if(task != null) {
+            task.interrupt();
+        }
         task = new Thread(new Runnable() {
             @Override
             public void run() {
-                System.out.println("执行文件扫描任务");
-                new FileScanner()
-                        .scan(path);//为了提高效率多线程执行扫描任务
-                //等待文件扫描任务执行完毕
-                //TODO
-                //刷新表格：将扫描出来的子文件和子文件夹都展示在表格里面
-                freshTable();
+                //文件接口扫描回调
+                ScanCallback callback = new FileSave();
+                FileScanner scanner = new FileScanner(callback);
+                try {
+                    System.out.println("执行文件扫描任务");
+                    scanner.scan(path);//为了提高效率多线程执行扫描任务
+                    //等待文件扫描任务执行完毕
+                    scanner.waitFinish();
+                    //刷新表格：将扫描出来的子文件和子文件夹都展示在表格里面
+                    System.out.println("扫描任务结束，刷新表格");
+                    freshTable();
+
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                    scanner.shutdown();
+                }
             }
         });
         task.start();
@@ -80,4 +94,5 @@ public class Controller implements Initializable {
         metas.clear();
         // TODO
     }
+
 }
