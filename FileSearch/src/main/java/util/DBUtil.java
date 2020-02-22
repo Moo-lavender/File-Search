@@ -28,8 +28,8 @@ public class DBUtil {
                 if (DATA_SOURCE == null) {
                     //初始化操作，使用volatile关键字静止指令重排序
                     SQLiteConfig config = new SQLiteConfig();
-                    config.setDateStringFormat(Util.DATA_PATTERN);
-                    DATA_SOURCE = new SQLiteDataSource();
+                    config.setDateStringFormat(Util.DATE_PATTERN);
+                    DATA_SOURCE = new SQLiteDataSource(config);
                     ((SQLiteDataSource)DATA_SOURCE).setUrl(getURL());
                 }
             }

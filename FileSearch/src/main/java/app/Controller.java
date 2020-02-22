@@ -12,13 +12,11 @@ import javafx.scene.control.TextField;
 import javafx.scene.layout.GridPane;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.Window;
-import task.DBInit;
-import task.FileSave;
-import task.FileScanner;
-import task.ScanCallback;
+import task.*;
 
 import java.io.File;
 import java.net.URL;
+import java.util.List;
 import java.util.ResourceBundle;
 
 public class Controller implements Initializable {
@@ -74,6 +72,7 @@ public class Controller implements Initializable {
                     System.out.println("执行文件扫描任务");
                     scanner.scan(path);//为了提高效率多线程执行扫描任务
                     //等待文件扫描任务执行完毕
+                    System.out.println("等待扫描任务结束"+path);
                     scanner.waitFinish();
                     //刷新表格：将扫描出来的子文件和子文件夹都展示在表格里面
                     System.out.println("扫描任务结束，刷新表格");
@@ -81,7 +80,6 @@ public class Controller implements Initializable {
 
                 } catch (InterruptedException e) {
                     e.printStackTrace();
-                    scanner.shutdown();
                 }
             }
         });
@@ -92,7 +90,18 @@ public class Controller implements Initializable {
     private void freshTable(){
         ObservableList<FileMeta> metas = fileTable.getItems();
         metas.clear();
-        // TODO
+        // 如果选择了某个目录表示需要根据搜索框的内容进行数据库文件信息的查询
+        String dir = srcDirectory.getText();
+        if (dir != null && dir.trim().length() != 0) {
+            String content = searchField.getText();
+            //提供数据库的查询方法
+            List<FileMeta> fileMetas = DirSearch.search(dir,content);
+            //TODO
+            //Collection ---> List/Set --->ArrayList/LinkedList/HashSet/TreeSet
+            //Map ---> HashMap/HashTable/TreeMap
+            metas.addAll(fileMetas);
+        }
+        //方法返回后 Javafx表单做什么？
+        //通过反射获取fileMeta类型中的属性（app.fxml文件中定义的属性）
     }
-
 }
